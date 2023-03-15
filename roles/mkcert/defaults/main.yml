@@ -1,0 +1,17 @@
+---
+mkcert_rootca: "LocalLabRoot"
+mkcert_rootca_subj: "/C=AU/O=Local Lab/OU=www.lab.local/CN=Local Lab Root"
+
+mkcert_intermediateca: "LocalLabCA"
+mkcert_intermediateca_subj: "/C=AU/O=Local Lab/CN=Local Lab CA"
+
+# These paths have to be writable on the local ansible host
+mkcert_ca_path: "{{ lookup('env','HOME') }}/cacerts"
+mkcert_certs_path: "{{ playbook_dir }}/certs"
+
+# Should not have to change these
+mkcert_root_crt: "{{ mkcert_ca_path }}/{{ mkcert_rootca }}.crt"
+mkcert_root_key: "{{ mkcert_ca_path }}/{{ mkcert_rootca }}.key"
+mkcert_ca_csr: "{{ mkcert_ca_path }}/{{ mkcert_intermediateca }}.csr"
+mkcert_ca_crt: "{{ mkcert_ca_path }}/{{ mkcert_intermediateca }}.crt"
+mkcert_ca_key: "{{ mkcert_ca_path }}/{{ mkcert_intermediateca }}.key"

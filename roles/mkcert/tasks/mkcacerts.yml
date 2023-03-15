@@ -1,0 +1,73 @@
+---
+- name: Make CA folder
+  local_action: file path={{ mkcert_ca_path }} state=directory
+  become: false
+
+- name: Test for Root
+  local_action: stat path={{ mkcert_root_crt }}
+  become: false
+  register: local_rootcert
+
+- block:
+  # Create self-signed root certifcate
+  - shell: openssl genrsa -out {{ mkcert_root_key }} 2048
+    args:
+      executable: /bin/bash
+
+  - shell: openssl req -new -x509 -nodes -sha256 -days 7304
+     -key {{ mkcert_root_key }}
+     -out {{ mkcert_root_crt }}
+     -subj "{{ mkcert_rootca_subj }}"
+     -extensions exts
+     -config <(cat
+     <(printf "[ req ]\n")
+     <(printf "distinguished_name=req\n")
+     <(printf "[ exts ]\n")
+     <(printf "keyUsage=critical,digitalSignature,keyCertSign,cRLSign\n")
+     <(printf "basicConstraints=critical,CA:true\n")
+     <(printf "subjectKeyIdentifier=hash\n")
+     <(printf "authorityKeyIdentifier=keyid\n")
+     )
+    args:
+      executable: /bin/bash
+  become: false
+  delegate_to: localhost
+  when: not local_rootcert.stat.exists
+
+- name: Test for CA
+  local_action: stat path={{ mkcert_ca_crt }}
+  become: false
+  register: local_cacert
+
+- block:
+  # Create intermediate certificate signed with root certificate
+  - shell: openssl req -newkey rsa:2048 -nodes
+     -keyout {{ mkcert_ca_key }}
+     -out {{ mkcert_ca_csr }}
+     -subj "{{ mkcert_intermediateca_subj }}"
+    args:
+      executable: /bin/bash
+ 
+  - shell: openssl x509 -req -days 3652 -sha256
+     -in {{ mkcert_ca_csr }}
+     -out {{ mkcert_ca_crt }}
+     -CA {{ mkcert_root_crt }}
+     -CAkey {{ mkcert_root_key }}
+     -set_serial 0x{{ lookup('password', '/dev/null chars=hexdigits length=32') }}
+     -extensions exts \
+     -extfile <(cat \
+     <(printf "[ exts ]\n")
+     <(printf "basicConstraints=critical,CA:true,pathlen:0\n")
+     <(printf "keyUsage=critical,digitalSignature,keyCertSign,cRLSign\n")
+     <(printf "extendedKeyUsage=serverAuth,clientAuth\n")
+     <(printf "certificatePolicies=@polsect\n")
+     <(printf "subjectKeyIdentifier=hash\n")
+     <(printf "authorityKeyIdentifier=keyid:always,issuer\n")
+     <(printf "[polsect]\n")
+     <(printf "policyIdentifier=anyPolicy\n")
+     )
+    args:
+      executable: /bin/bash
+  become: false
+  delegate_to: localhost
+  when: not local_cacert.stat.exists

@@ -1,0 +1,114 @@
+---
+- include_tasks: mkcacerts.yml
+
+# Default certificate subject to CN=fqdn if site_name is not defined
+- name: Check that site_name is defined, otherwise default to fqdn
+  set_fact: mkcert_site_name="{{ site_name | default('{{ ansible_fqdn }}') }}"
+
+# Default certificate subject to /CN=site_name if cert_org is not defined
+- name: Check that cert_org is defined, otherwise default to ""
+  set_fact: mkcert_subj_org="{{ cert_org | default('') }}"
+
+- name: Checking for playbook folder 'certs' to store certificates created
+  local_action: file path={{ mkcert_certs_path }} state=directory
+  become: false
+
+- name: Determine mkcert_file_name from site_name
+  set_fact:
+    mkcert_file_name: "{{ mkcert_site_name | regex_replace('\\.', '_') }}"
+- set_fact:
+    mkcert_file_name: "{{ mkcert_file_name | regex_replace('\\*', 'star') }}"
+
+- name: Test for localcert
+  local_action: stat path={{ mkcert_certs_path }}/{{ mkcert_file_name }}.crt
+  become: false
+  register: localcert
+  
+- block:
+  - name: Add domain as Subject Alternate Name if site_name is a wildcard
+    set_fact:
+      mkcert_wild_san: "DNS:{{ mkcert_site_name | regex_replace('^\\*\\.', '') }}"
+    when: "'*' in mkcert_site_name"
+
+  - name: Build subject alternate names with wildcard domain
+    set_fact:
+      mkcert_alt_name: "{{ mkcert_wild_san }}{% if cert_san is defined %},{{ cert_san }}{% endif %}"
+    when: "'*' in mkcert_site_name"
+
+  - name: Build subject alternate names
+    set_fact:
+      mkcert_alt_name: "{{ cert_san }}"
+    when: (mkcert_wild_san is not defined or mkcert_wild_san == '') and cert_san is defined
+    
+  - name: Create CSR for {{ mkcert_subj_org }}/CN={{ mkcert_site_name }}
+    shell: openssl req -newkey rsa:2048 -nodes
+      -keyout {{ mkcert_certs_path }}/{{ mkcert_file_name }}.key
+      -out {{ mkcert_certs_path }}/{{ mkcert_file_name }}.csr
+      -subj "{{ mkcert_subj_org }}/CN={{ mkcert_site_name }}"
+    args:
+      creates: "{{ mkcert_certs_path }}/{{ mkcert_file_name }}.csr"
+    become: false
+    delegate_to: localhost
+
+  - name: Signing {{ mkcert_file_name }}.csr
+    shell: openssl x509 -req -sha256 -days 3652
+     -in {{ mkcert_certs_path }}/{{ mkcert_file_name }}.csr
+     -out {{ mkcert_certs_path }}/{{ mkcert_file_name }}.crt
+     -CA {{ mkcert_ca_crt }}
+     -CAkey {{ mkcert_ca_key }}
+     -set_serial 0x{{ lookup('password', '/dev/null chars=hexdigits length=32') }}
+     -extensions exts
+     -extfile <(cat
+     <(printf "[ exts ]\n")
+     <(printf "authorityKeyIdentifier = keyid:always,issuer\n")
+     <(printf "subjectKeyIdentifier   = hash\n")
+     {% if mkcert_alt_name is defined and mkcert_alt_name != '' %}
+     <(printf "subjectAltName         = {{ mkcert_alt_name }}\n")
+     {% endif %}
+     <(printf "keyUsage               = critical,digitalSignature,keyEncipherment\n") \
+     <(printf "extendedKeyUsage       = serverAuth,clientAuth\n") \
+     <(printf "basicConstraints       = critical,CA:false\n") \
+     <(printf "certificatePolicies    = 2.23.140.1.2.1\n") \
+     )
+    args:
+      executable: /bin/bash
+    become: false
+    delegate_to: localhost
+  when: not localcert.stat.exists
+  
+- block:
+  - name: Copy CA certificate to /etc/pki/tls/certs/
+    copy: src={{ mkcert_ca_crt }} dest=/etc/pki/tls/certs/ owner=root group=root mode=0644
+  - name: Copy new cert {{ mkcert_file_name }}.crt to /etc/pki/tls/certs/
+    copy: src={{ mkcert_certs_path }}/{{ mkcert_file_name }}.crt dest=/etc/pki/tls/certs/ owner=root group=root mode=0644
+  - name: Copy new key {{ mkcert_file_name }}.key to /etc/pki/tls/private/
+    copy: src={{ mkcert_certs_path }}/{{ mkcert_file_name }}.key dest=/etc/pki/tls/private/ owner=root group=root mode=0600
+  when: ansible_os_family == 'RedHat'
+
+- block:
+  - name: Copy CA certificate to /etc/ssl/certs/
+    copy: src={{ mkcert_ca_crt }} dest=/etc/ssl/certs/ owner=root group=root mode=0644
+  - name: Copy new cert {{ mkcert_file_name }}.crt to /etc/ssl/certs/
+    copy: src={{ mkcert_certs_path }}/{{ mkcert_file_name }}.crt dest=/etc/ssl/certs/ owner=root group=root mode=0644
+  - name: Copy new key {{ mkcert_file_name }}.key to /etc/ssl/private/
+    copy: src={{ mkcert_certs_path }}/{{ mkcert_file_name }}.key dest=/etc/ssl/private/ owner=root group=root mode=0600
+  when: ansible_os_family == 'Debian'
+
+# This is to prevent variable values being used from previous runs of this role in the same playbook.
+- name: Clear role variable
+  set_fact: mkcert_alt_name=''
+  when: mkcert_alt_name is defined
+- name: Clear role variable
+  set_fact: mkcert_wild_san=''
+  when: mkcert_wild_san is defined
+
+# Create the return variable
+- block:
+  - set_fact:
+      mkcert_tmp_cert:
+        root: "{{ mkcert_root_crt }}"
+        ca:   "{{ mkcert_ca_crt }}"
+        crt:  "{{ mkcert_certs_path }}/{{ mkcert_file_name }}.crt"
+        key:  "{{ mkcert_certs_path }}/{{ mkcert_file_name }}.key"
+  - set_fact: { "{{ cert_return }}": "{{ mkcert_tmp_cert }}" }
+  when: cert_return is defined

@@ -1,0 +1,26 @@
+---
+- name: Install Apache in RedHat Family OS
+  block:
+  - yum: 
+      name:
+      - httpd
+      - mod_ssl
+      state: present 
+  - debug: msg="{{ site_cert }}"
+  - template: src=redhat_ssl.conf.j2 dest=/etc/httpd/conf.d/{{ site_name | regex_replace('\.', '_') }}.conf owner=root group=root mode=0644
+  - service: name=httpd state=restarted enabled=true
+  when: ansible_os_family == 'RedHat'
+
+- name: Install Apache in Debian Family OS
+  block:
+  - apt: 
+      name:
+      - apache2
+      state: present 
+  - command: a2enmod ssl
+  - debug: msg="{{ site_cert }}"
+  - template: src=debian_ssl.conf.j2 dest=/etc/apache2/sites-available/{{ site_name | regex_replace('\.', '_') }}.conf owner=root group=root mode=0644
+  - command: a2ensite {{ site_name | regex_replace('\.', '_') }}
+  - service: name=apache2 state=restarted enabled=true
+  when: ansible_os_family == 'Debian'
+

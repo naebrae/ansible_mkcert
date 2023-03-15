@@ -1,0 +1,38 @@
+---
+- hosts: all
+  gather_facts: true
+  become: true
+
+  roles:
+
+  - { role: mkcert, 
+       site_name: "localhost",
+       cert_org: "/C=AU/ST=Western Australia/L=Perth/O=Local Lab",
+       cert_san: "DNS:localhost.localdomain,IP:127.0.0.1,IP:::1",
+       cert_return: localhost_cert 
+    }
+  - { role: apache_example,
+       site_name: "localhost",
+       site_cert: "{{ localhost_cert }}"
+    }
+
+  - { role: mkcert, 
+       site_name: "dc1.ad.site.name",
+       cert_org: "/DC=name/DC=site/DC=ad",
+       cert_san: "DNS:{{ ansible_fqdn }},DNS:{{ ansible_hostname }}
+         {% for ipv4_address in ansible_all_ipv4_addresses %},IP:{{ ipv4_address }}{% endfor %}
+         {% for ipv6_address in ansible_all_ipv6_addresses %},IP:{{ ipv6_address }}{% endfor %}",
+       cert_return: dc1_cert
+    }
+
+  - { role: mkcert, site_name: "*.site.name", cert_org: "/C=AU/O=Local Lab/ST=Western Australia/L=Perth", cert_return: star_cert }
+
+  # Using defaults
+  - mkcert
+  - apache_example
+
+  post_tasks:
+
+  - debug: msg="{{ localhost_cert.crt }} {{ localhost_cert.key }}"
+  - debug: msg="{{ dc1_cert }}"
+  - debug: msg="{{ star_cert }}"

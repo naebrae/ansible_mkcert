@@ -1,0 +1,7 @@
+<VirtualHost *:443>
+    Servername {{ site_name }}
+    SSLCertificateFile /etc/ssl/certs/{{ site_cert.crt | basename }}
+    SSLCertificateKeyFile /etc/ssl/private/{{ site_cert.key | basename }}
+    SSLCertificateChainFile /etc/ssl/certs/{{ site_cert.ca | basename }}
+</VirtualHost>
+
