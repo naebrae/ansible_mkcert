@@ -1,5 +1,6 @@
 ---
 - include_tasks: mkcacerts.yml
+  run_once: true
 
 # Default certificate subject to CN=fqdn if site_name is not defined
 - name: Check that site_name is defined, otherwise default to fqdn
