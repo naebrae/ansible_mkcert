@@ -8,7 +8,7 @@
 
 # Default certificate subject to /CN=site_name if cert_org is not defined
 - name: Check that cert_org is defined, otherwise default to ""
-  set_fact: mkcert_subj_org="{{ cert_org | default('') }}"
+  set_fact: mkcert_subj_org="{{ cert_org | regex_replace('/$', '') | default('') }}"
 
 - name: Checking for playbook folder 'certs' to store certificates created
   local_action: file path={{ mkcert_certs_path }} state=directory
