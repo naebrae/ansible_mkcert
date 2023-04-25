@@ -7,7 +7,7 @@
 
   - { role: mkcert, 
        site_name: "localhost",
-       cert_org: "/C=AU/ST=Western Australia/L=Perth/O=Local Lab",
+       cert_org: "/C=AU/ST=Western Australia/L=Perth/O=Home Lab/",
        cert_san: "DNS:localhost.localdomain,IP:127.0.0.1,IP:::1",
        cert_return: localhost_cert 
     }
@@ -25,7 +25,7 @@
        cert_return: dc1_cert
     }
 
-  - { role: mkcert, site_name: "*.site.name", cert_org: "/C=AU/O=Local Lab/ST=Western Australia/L=Perth", cert_return: star_cert }
+  - { role: mkcert, site_name: "*.site.name", cert_org: "/C=AU/O=Home Lab/ST=Western Australia/L=Perth", cert_return: star_cert }
 
   # Using defaults
   - mkcert

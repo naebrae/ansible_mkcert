@@ -1,9 +1,9 @@
 ---
-mkcert_rootca: "LocalLabRoot"
-mkcert_rootca_subj: "/C=AU/O=Local Lab/OU=www.lab.local/CN=Local Lab Root"
+mkcert_rootca: "HomeLabRoot"
+mkcert_rootca_subj: "/C=AU/O=Home Lab/OU=www.lab.home/CN=Home Lab Root"
 
-mkcert_intermediateca: "LocalLabCA"
-mkcert_intermediateca_subj: "/C=AU/O=Local Lab/CN=Local Lab CA"
+mkcert_intermediateca: "HomeLabCA"
+mkcert_intermediateca_subj: "/C=AU/O=Home Lab/CN=Home Lab CA"
 
 # These paths have to be writable on the local ansible host
 mkcert_ca_path: "{{ lookup('env','HOME') }}/cacerts"

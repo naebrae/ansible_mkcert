@@ -2,8 +2,8 @@
 
 Creates a `Test Lab Certificate Authority` in the **$HOME/cacerts** folder of the operating account if it doesn't already exist. Those details default to:
 ```
-LocalLabRoot.crt: "/C=AU/O=Local Lab/OU=www.lab.local/CN=Local Lab Root"
-LocalLabCA.crt: "/C=AU/O=Local Lab/CN=Local Lab CA"
+HomeLabRoot.crt: "/C=AU/O=Home Lab/OU=www.lab.home/CN=Home Lab Root"
+HomeLabCA.crt: "/C=AU/O=Home Lab/CN=Home Lab CA"
 ```
 After the `Test Lab Certificate Authority` is created or verified to exist, it creates the requested `server certifcate`, signed by the certificate authority. It creates the certificate in a **certs** folder in the **playbook base** folder. It will reuse a certificate with the file name calculated from the requested `Common Name` in the Subject. Once the certificate is created or resued, it is copied to the remote server:
 
@@ -11,13 +11,13 @@ After the `Test Lab Certificate Authority` is created or verified to exist, it c
    ```
    .crt to /etc/pki/tls/certs/
    .key to /etc/pki/tls/private/
-   LocalLabCA.crt to /etc/pki/tls/certs/
+   HomeLabCA.crt to /etc/pki/tls/certs/
    ```
 - Debian family:
    ```
    .crt to /etc/ssl/certs/
    .key to /etc/ssl/private/
-   LocalLabCA.crt to /etc/ssl/certs/
+   HomeLabCA.crt to /etc/ssl/certs/
    ```
 
 ## Example Usage
@@ -26,7 +26,7 @@ After the `Test Lab Certificate Authority` is created or verified to exist, it c
    ```
    - { role: mkcert,
         site_name: localhost,
-        cert_org: "/C=AU/ST=Western Australia/L=Perth/O=Local Lab",
+        cert_org: "/C=AU/ST=Western Australia/L=Perth/O=Home Lab",
         cert_san: "DNS:localhost.localdomain,IP:127.0.0.1,IP:::1",
         cert_return: localhost_cert
      }
@@ -34,10 +34,10 @@ After the `Test Lab Certificate Authority` is created or verified to exist, it c
 
    Returns:
    ```
-   {{ localhost_cert.ca }}: "<<$HOME>>/cacerts/LocalLabCA.crt",
+   {{ localhost_cert.ca }}: "<<$HOME>>/cacerts/HomeLabCA.crt",
    {{ localhost_cert.crt }}: "<<playbook_dir>>/certs/localhost.crt",
    {{ localhost_cert.key }}: "<<playbook_dir>>/certs/localhost.key",
-   {{ localhost_cert.root }}: "<<$HOME>>/cacerts/LocalLabRoot.crt"
+   {{ localhost_cert.root }}: "<<$HOME>>/cacerts/HomeLabRoot.crt"
    ```
 
 
@@ -55,24 +55,24 @@ After the `Test Lab Certificate Authority` is created or verified to exist, it c
 
    Returns:
    ```
-    {{ dc1_cert.ca }}: "<<$HOME>>/cacerts/LocalLabCA.crt",
+    {{ dc1_cert.ca }}: "<<$HOME>>/cacerts/HomeLabCA.crt",
     {{ dc1_cert.crt }}: "<<playbook_dir>>/certs/dc1_ad_site_name.crt",
     {{ dc1_cert.key }}: "<<playbook_dir>>/certs/dc1_ad_site_name.key",
-    {{ dc1_cert.root }}: "<<$HOME>>/cacerts/LocalLabRoot.crt"
+    {{ dc1_cert.root }}: "<<$HOME>>/cacerts/HomeLabRoot.crt"
    ```
 
 
 - Create wildcard certificate
    ```
-  - { role: mkcert, site_name: "*.site.name", cert_org: "/C=AU/O=Local Lab/ST=Western Australia/L=Perth", cert_return: star_cert }
+  - { role: mkcert, site_name: "*.site.name", cert_org: "/C=AU/O=Home Lab/ST=Western Australia/L=Perth", cert_return: star_cert }
    ```
 
    Returns:
    ```
-    {{ star_cert.ca }}: "<<$HOME>>/cacerts/LocalLabCA.crt"
+    {{ star_cert.ca }}: "<<$HOME>>/cacerts/HomeLabCA.crt"
     {{ star_cert.crt }}: "<<playbook_dir>>/certs/star_site_name.crt"
     {{ star_cert.key }}: "<<playbook_dir>>/certs/star_site_name.key"
-    {{ star_cert.root }}: "<<$HOME>>/cacerts/LocalLabRoot.crt"
+    {{ star_cert.root }}: "<<$HOME>>/cacerts/HomeLabRoot.crt"
    ```
 
 

@@ -3,4 +3,4 @@ site_name: "{{ ansible_fqdn }}"
 site_cert:
   crt: "{{ ansible_fqdn | regex_replace('\\.', '_') }}.crt"
   key: "{{ ansible_fqdn | regex_replace('\\.', '_') }}.key"
-  ca: LocalLabCA.crt
+  ca: HomeLabCA.crt
